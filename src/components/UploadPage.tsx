@@ -18,9 +18,6 @@ interface Props {
 
 type Stage = "upload" | "processing" | "review";
 
-const AUTO_GROUP_BATCH_SIZE = 50;
-const AUTO_GROUP_IMAGE_SIZE = 384;
-
 function resizeImage(file: File, maxDim = 512): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -73,56 +70,41 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
   const handleAutoGroup = async () => {
     if (photos.length === 0) return;
-    if (photos.length > 200) {
-      setError("Maximum 200 photos. Remove some and try again.");
+    if (photos.length > 99) {
+      setError("Maximum 99 photos. Remove some and try again.");
       return;
     }
     setStage("processing");
-    setStatus("Preparing photos...");
+    setStatus("Analyzing photos...");
     setError("");
 
+    const BATCH_SIZE = 50;
+
     try {
+      const inputs = await Promise.all(
+        photos.map(async (p) => ({
+          id: p.id,
+          base64: await resizeImage(p.file),
+          mimeType: "image/jpeg",
+          fileName: p.file.name,
+        }))
+      );
+
       const allItems: GroupedItem[] = [];
-
-      for (let i = 0; i < photos.length; i += AUTO_GROUP_BATCH_SIZE) {
-        const batchPhotos = photos.slice(i, i + AUTO_GROUP_BATCH_SIZE);
-        const batchNum = Math.floor(i / AUTO_GROUP_BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(photos.length / AUTO_GROUP_BATCH_SIZE);
-
-        setStatus(
-          totalBatches > 1
-            ? `Preparing batch ${batchNum}/${totalBatches}...`
-            : "Preparing photos..."
-        );
-
-        const inputs = await Promise.all(
-          batchPhotos.map(async (p) => ({
-            id: p.id,
-            base64: await resizeImage(p.file, AUTO_GROUP_IMAGE_SIZE),
-            mimeType: "image/jpeg",
-            fileName: p.file.name,
-          }))
-        );
-
-        setStatus(
-          totalBatches > 1
-            ? `Analyzing batch ${batchNum}/${totalBatches}...`
-            : "Analyzing photos..."
-        );
-
+      for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
+        const batch = inputs.slice(i, i + BATCH_SIZE);
+        setStatus(`Analyzing photos ${i + 1}–${Math.min(i + BATCH_SIZE, inputs.length)} of ${inputs.length}...`);
         const res = await fetch("/api/auto-group", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photos: inputs }),
+          body: JSON.stringify({ photos: batch }),
         });
-
         if (!res.ok) {
           const err = await res.json();
           throw new Error(err.error || err.details || "Grouping failed");
         }
-
         const data = await res.json();
-        const batchItems: GroupedItem[] = data.groups.map(
+        const batchItems = data.groups.map(
           (g: { photos: { photoId: string; imageType: PieceImageType }[] }) => ({
             id: crypto.randomUUID(),
             photos: g.photos.map((p) => ({ localPhotoId: p.photoId, imageType: p.imageType })),
@@ -130,7 +112,6 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         );
         allItems.push(...batchItems);
       }
-
       setItems(allItems);
       setStage("review");
     } catch (err) {
@@ -291,7 +272,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       <main className={`w-full max-w-lg p-4 flex-1 ${photos.length > 0 ? "pb-24" : ""}`}>
         <h2 className="text-lg font-semibold text-center mb-1">Add photos</h2>
         <p className="text-sm text-gray-500 text-center mb-1">Upload all clothing photos</p>
-        <p className="text-xs text-gray-400 text-center mb-6">Up to 200 photos · Upload in sequence for better AI accuracy</p>
+        <p className="text-xs text-gray-400 text-center mb-6">Up to 99 images at a time</p>
 
         {/* Upload button */}
         <button
