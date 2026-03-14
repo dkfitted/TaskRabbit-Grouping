@@ -19,12 +19,14 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white p-6">
         <div className="text-center max-w-xs">
-          <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center mb-3">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-semibold">Done!</h1>
           </div>
-          <h1 className="text-xl font-semibold mb-2">Done!</h1>
           <p className="text-sm text-gray-500 mb-6">
             {result.itemCount} items uploaded to Fitted
           </p>

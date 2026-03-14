@@ -168,15 +168,15 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
   if (stage === "review") {
     const validItems = items.filter((i) => i.photos.length > 0);
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <header className="w-full max-w-lg bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <button onClick={() => setStage("upload")} className="text-sm text-gray-500 hover:text-black">
             ← Back
           </button>
           <span className="text-sm font-mono">{session.taskRabbitId}</span>
         </header>
 
-        <main className="p-4 max-w-2xl mx-auto">
+        <main className="w-full max-w-lg p-4 flex-1 pb-24">
           <h2 className="text-lg font-semibold mb-1">Review {validItems.length} items</h2>
           <p className="text-sm text-gray-500 mb-4">Tap to adjust, then submit</p>
 
@@ -230,14 +230,16 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
           {error && <p className="mt-4 text-sm text-red-500 text-center">{error}</p>}
         </main>
 
-        <footer className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4">
-          <button
-            onClick={handleSubmit}
-            disabled={validItems.length === 0}
-            className="w-full max-w-2xl mx-auto block h-12 bg-black text-white font-medium rounded-xl disabled:opacity-40"
-          >
+        <footer className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4 flex justify-center">
+          <div className="w-full max-w-lg">
+            <button
+              onClick={handleSubmit}
+              disabled={validItems.length === 0}
+              className="w-full h-12 bg-black text-white font-medium rounded-xl disabled:opacity-40"
+            >
             Submit {validItems.length} items to Fitted
           </button>
+          </div>
         </footer>
       </div>
     );
@@ -245,17 +247,18 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
   // Upload state (default)
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-white flex flex-col items-center">
+      <header className="w-full max-w-lg border-b border-gray-100 px-4 py-3 flex items-center justify-between mx-auto">
         <button onClick={onBack} className="text-sm text-gray-500 hover:text-black">
           ← Back
         </button>
         <span className="text-sm font-mono">{session.taskRabbitId}</span>
       </header>
 
-      <main className="p-4 max-w-lg mx-auto">
+      <main className={`w-full max-w-lg p-4 flex-1 ${photos.length > 0 ? "pb-24" : ""}`}>
         <h2 className="text-lg font-semibold text-center mb-1">Add photos</h2>
-        <p className="text-sm text-gray-500 text-center mb-6">Upload all clothing photos</p>
+        <p className="text-sm text-gray-500 text-center mb-1">Upload all clothing photos</p>
+        <p className="text-xs text-gray-400 text-center mb-6">Up to 200 photos · Upload in sequence for better AI accuracy</p>
 
         {/* Upload button */}
         <button
@@ -318,13 +321,15 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
       {/* Bottom button */}
       {photos.length > 0 && (
-        <footer className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4">
-          <button
-            onClick={handleAutoGroup}
-            className="w-full max-w-lg mx-auto block h-12 bg-black text-white font-medium rounded-xl"
-          >
+        <footer className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4 flex justify-center">
+          <div className="w-full max-w-lg">
+            <button
+              onClick={handleAutoGroup}
+              className="w-full h-12 bg-black text-white font-medium rounded-xl"
+            >
             Continue with {photos.length} photos
           </button>
+          </div>
         </footer>
       )}
     </div>
