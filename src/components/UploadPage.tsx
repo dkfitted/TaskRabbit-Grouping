@@ -82,32 +82,38 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     setError("");
 
     try {
-      const inputs = await Promise.all(
-        photos.map(async (p) => ({
-          id: p.id,
-          base64: await resizeImage(p.file, AUTO_GROUP_IMAGE_SIZE),
-          mimeType: "image/jpeg",
-          fileName: p.file.name,
-        }))
-      );
-
-      const batches: typeof inputs[] = [];
-      for (let i = 0; i < inputs.length; i += AUTO_GROUP_BATCH_SIZE) {
-        batches.push(inputs.slice(i, i + AUTO_GROUP_BATCH_SIZE));
-      }
-
       const allItems: GroupedItem[] = [];
-      for (let i = 0; i < batches.length; i++) {
+
+      for (let i = 0; i < photos.length; i += AUTO_GROUP_BATCH_SIZE) {
+        const batchPhotos = photos.slice(i, i + AUTO_GROUP_BATCH_SIZE);
+        const batchNum = Math.floor(i / AUTO_GROUP_BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(photos.length / AUTO_GROUP_BATCH_SIZE);
+
         setStatus(
-          batches.length > 1
-            ? `Analyzing batch ${i + 1}/${batches.length}...`
+          totalBatches > 1
+            ? `Preparing batch ${batchNum}/${totalBatches}...`
+            : "Preparing photos..."
+        );
+
+        const inputs = await Promise.all(
+          batchPhotos.map(async (p) => ({
+            id: p.id,
+            base64: await resizeImage(p.file, AUTO_GROUP_IMAGE_SIZE),
+            mimeType: "image/jpeg",
+            fileName: p.file.name,
+          }))
+        );
+
+        setStatus(
+          totalBatches > 1
+            ? `Analyzing batch ${batchNum}/${totalBatches}...`
             : "Analyzing photos..."
         );
 
         const res = await fetch("/api/auto-group", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ photos: batches[i] }),
+          body: JSON.stringify({ photos: inputs }),
         });
 
         if (!res.ok) {
