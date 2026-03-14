@@ -272,7 +272,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       <main className={`w-full max-w-lg p-4 flex-1 ${photos.length > 0 ? "pb-24" : ""}`}>
         <h2 className="text-lg font-semibold text-center mb-1">Add photos</h2>
         <p className="text-sm text-gray-500 text-center mb-1">Upload all clothing photos</p>
-        <p className="text-xs text-gray-400 text-center mb-6">Up to 99 images at a time</p>
+        <p className="text-xs text-gray-400 text-center mb-6">Up to 99 images at a time · Upload in sequence for better auto-grouping accuracy</p>
 
         {/* Upload button */}
         <button
