@@ -18,6 +18,8 @@ interface Props {
 
 type Stage = "upload" | "processing" | "review";
 
+const AUTO_GROUP_BATCH_SIZE = 50;
+
 function resizeImage(file: File, maxDim = 512): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -70,8 +72,12 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
   const handleAutoGroup = async () => {
     if (photos.length === 0) return;
+    if (photos.length > 200) {
+      setError("Maximum 200 photos. Remove some and try again.");
+      return;
+    }
     setStage("processing");
-    setStatus("Analyzing photos...");
+    setStatus("Preparing photos...");
     setError("");
 
     try {
@@ -84,21 +90,41 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         }))
       );
 
-      const res = await fetch("/api/auto-group", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photos: inputs }),
-      });
+      const batches: typeof inputs[] = [];
+      for (let i = 0; i < inputs.length; i += AUTO_GROUP_BATCH_SIZE) {
+        batches.push(inputs.slice(i, i + AUTO_GROUP_BATCH_SIZE));
+      }
 
-      if (!res.ok) throw new Error((await res.json()).error || "Grouping failed");
+      const allItems: GroupedItem[] = [];
+      for (let i = 0; i < batches.length; i++) {
+        setStatus(
+          batches.length > 1
+            ? `Analyzing batch ${i + 1}/${batches.length}...`
+            : "Analyzing photos..."
+        );
 
-      const data = await res.json();
-      setItems(
-        data.groups.map((g: { photos: { photoId: string; imageType: PieceImageType }[] }) => ({
-          id: crypto.randomUUID(),
-          photos: g.photos.map((p) => ({ localPhotoId: p.photoId, imageType: p.imageType })),
-        }))
-      );
+        const res = await fetch("/api/auto-group", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photos: batches[i] }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || err.details || "Grouping failed");
+        }
+
+        const data = await res.json();
+        const batchItems: GroupedItem[] = data.groups.map(
+          (g: { photos: { photoId: string; imageType: PieceImageType }[] }) => ({
+            id: crypto.randomUUID(),
+            photos: g.photos.map((p) => ({ localPhotoId: p.photoId, imageType: p.imageType })),
+          })
+        );
+        allItems.push(...batchItems);
+      }
+
+      setItems(allItems);
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
