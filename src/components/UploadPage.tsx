@@ -53,9 +53,9 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
   const [stage, setStage] = useState<Stage>("upload");
   const [progress, setProgress] = useState({ current: 0, total: 0, message: "" });
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Add photos
   const addPhotos = useCallback((files: FileList | File[]) => {
     const newPhotos: LocalPhoto[] = Array.from(files)
       .filter((f) => f.type.startsWith("image/"))
@@ -75,7 +75,6 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     });
   }, []);
 
-  // Auto-group with AI
   const handleAutoGroup = async () => {
     if (photos.length === 0) return;
 
@@ -84,7 +83,6 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     setError("");
 
     try {
-      // Resize all photos
       const results = await Promise.allSettled(
         photos.map(async (photo, i) => {
           const base64 = await resizeImage(photo.file, 512);
@@ -107,18 +105,21 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         throw new Error("No photos could be processed");
       }
 
-      // Batch and send to AI
       const batches: typeof photoInputs[] = [];
       for (let i = 0; i < photoInputs.length; i += AUTO_GROUP_BATCH_SIZE) {
         batches.push(photoInputs.slice(i, i + AUTO_GROUP_BATCH_SIZE));
       }
 
-      setProgress({ current: 0, total: batches.length, message: "AI analyzing photos..." });
+      setProgress({ current: 0, total: batches.length, message: "AI is analyzing..." });
 
       const allItems: GroupedItem[] = [];
 
       for (let i = 0; i < batches.length; i++) {
-        setProgress({ current: i + 1, total: batches.length, message: `Analyzing batch ${i + 1} of ${batches.length}...` });
+        setProgress({ 
+          current: i + 1, 
+          total: batches.length, 
+          message: batches.length > 1 ? `Processing batch ${i + 1}/${batches.length}` : "AI is analyzing..." 
+        });
 
         const res = await fetch("/api/auto-group", {
           method: "POST",
@@ -154,7 +155,6 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     }
   };
 
-  // Submit to Fitted
   const handleSubmit = async () => {
     const validItems = items.filter((item) => item.photos.length > 0);
     if (validItems.length === 0) return;
@@ -165,7 +165,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     try {
       const allPhotosToUpload = validItems.flatMap((item) => item.photos);
       const total = allPhotosToUpload.length;
-      setProgress({ current: 0, total, message: "Uploading photos..." });
+      setProgress({ current: 0, total, message: "Uploading..." });
 
       const uploadResults = new Map<string, UploadImageResponse>();
       const UPLOAD_BATCH_SIZE = 10;
@@ -190,10 +190,10 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         results.forEach(({ localPhotoId, data }) =>
           uploadResults.set(localPhotoId, data)
         );
-        setProgress({ current: Math.min(i + UPLOAD_BATCH_SIZE, total), total, message: "Uploading photos..." });
+        setProgress({ current: Math.min(i + UPLOAD_BATCH_SIZE, total), total, message: "Uploading..." });
       }
 
-      setProgress({ current: total, total, message: "Submitting to Fitted..." });
+      setProgress({ current: total, total, message: "Finalizing..." });
 
       const submitBody = {
         taskRabbitId: session.taskRabbitId,
@@ -233,7 +233,6 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     }
   };
 
-  // Item management
   const removeItem = (itemId: string) => {
     setItems((prev) => prev.filter((i) => i.id !== itemId));
   };
@@ -264,60 +263,101 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     );
   };
 
-  // Drop handler
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (e.dataTransfer.files.length > 0) {
-        addPhotos(e.dataTransfer.files);
-      }
-    },
-    [addPhotos]
-  );
+  // Loading state
+  if (stage === "grouping" || stage === "submitting") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-2 border-[#222]" />
+            <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          </div>
+          <p className="text-[15px] font-medium text-white mb-1">{progress.message}</p>
+          <p className="text-[13px] text-[#666]">
+            {progress.current} of {progress.total}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  // Render upload stage
+  // Upload state
   if (stage === "upload") {
     return (
       <div className="min-h-screen flex flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between p-4 border-b border-zinc-800">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-[14px] text-[#888] hover:text-white transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </button>
-          <div className="text-sm">
-            <span className="text-zinc-500">Customer:</span>{" "}
-            <span className="font-mono text-white">{session.taskRabbitId}</span>
+          <div className="flex items-center gap-2 text-[14px]">
+            <span className="text-[#666]">Customer</span>
+            <span className="font-mono text-white bg-[#1a1a1a] px-2.5 py-1 rounded-md">{session.taskRabbitId}</span>
           </div>
         </header>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-full max-w-2xl">
-            <h1 className="text-3xl font-bold text-center mb-2">Upload Photos</h1>
-            <p className="text-zinc-400 text-center mb-8">
-              Add all clothing photos, then AI will automatically group them
-            </p>
+        {/* Main */}
+        <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          <div className="w-full max-w-xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-10"
+            >
+              <h1 className="text-[28px] font-semibold tracking-tight mb-2">
+                Upload Photos
+              </h1>
+              <p className="text-[15px] text-[#888]">
+                Add all clothing photos. AI will group them automatically.
+              </p>
+            </motion.div>
 
             {/* Drop zone */}
-            <div
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files.length > 0) addPhotos(e.dataTransfer.files);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-zinc-700 rounded-3xl p-12 text-center cursor-pointer hover:border-zinc-500 hover:bg-zinc-900/50 transition-all"
+              className={`
+                relative cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-200
+                ${isDragging 
+                  ? "border-violet-500 bg-violet-500/5" 
+                  : "border-[#333] hover:border-[#444] hover:bg-[rgba(255,255,255,0.02)]"
+                }
+              `}
             >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-zinc-800 flex items-center justify-center">
-                <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+              <div className="py-16 px-8 text-center">
+                <div className={`
+                  w-14 h-14 mx-auto mb-5 rounded-2xl flex items-center justify-center transition-colors
+                  ${isDragging ? "bg-violet-500/20" : "bg-[#1a1a1a]"}
+                `}>
+                  <svg className={`w-6 h-6 ${isDragging ? "text-violet-400" : "text-[#666]"}`} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                  </svg>
+                </div>
+                <p className="text-[15px] font-medium text-white mb-1">
+                  {isDragging ? "Drop photos here" : "Click to upload or drag and drop"}
+                </p>
+                <p className="text-[13px] text-[#666]">
+                  JPG, PNG, or HEIC
+                </p>
               </div>
-              <p className="text-lg font-medium mb-1">Drop photos here or click to browse</p>
-              <p className="text-sm text-zinc-500">JPG, PNG, HEIC supported</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -326,249 +366,257 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                 className="hidden"
                 onChange={(e) => e.target.files && addPhotos(e.target.files)}
               />
-            </div>
+            </motion.div>
 
             {/* Photo grid */}
-            {photos.length > 0 && (
-              <div className="mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-zinc-400">
-                    {photos.length} photo{photos.length !== 1 ? "s" : ""} ready
-                  </p>
-                  <button
-                    onClick={() => {
-                      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-                      setPhotos([]);
-                    }}
-                    className="text-sm text-zinc-500 hover:text-red-400 transition-colors"
-                  >
-                    Clear all
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                  {photos.map((photo) => (
-                    <motion.div
-                      key={photo.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 group"
+            <AnimatePresence>
+              {photos.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-8"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[14px] text-[#888]">
+                      {photos.length} photo{photos.length !== 1 ? "s" : ""} added
+                    </span>
+                    <button
+                      onClick={() => {
+                        photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+                        setPhotos([]);
+                      }}
+                      className="text-[13px] text-[#666] hover:text-red-400 transition-colors"
                     >
-                      <img
-                        src={photo.previewUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removePhoto(photo.id);
-                        }}
-                        className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      Clear all
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+                    {photos.map((photo, i) => (
+                      <motion.div
+                        key={photo.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.02 }}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#111] group ring-1 ring-[rgba(255,255,255,0.06)]"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
+                        <img
+                          src={photo.previewUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removePhoto(photo.id);
+                          }}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {error && (
-              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm text-center">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-[14px] text-red-400 text-center"
+              >
                 {error}
-              </div>
+              </motion.div>
             )}
           </div>
-        </div>
+        </main>
 
-        {/* Bottom bar */}
-        {photos.length > 0 && (
-          <div className="border-t border-zinc-800 p-4">
-            <div className="max-w-2xl mx-auto flex items-center justify-between">
-              <p className="text-zinc-400 text-sm">
-                {photos.length} photo{photos.length !== 1 ? "s" : ""} selected
-              </p>
-              <button
-                onClick={handleAutoGroup}
-                className="px-8 py-3 bg-white text-zinc-900 font-semibold rounded-xl hover:bg-zinc-100 transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Auto-Group with AI
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Footer */}
+        <AnimatePresence>
+          {photos.length > 0 && (
+            <motion.footer
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4"
+            >
+              <div className="max-w-xl mx-auto flex items-center justify-between">
+                <span className="text-[14px] text-[#888]">
+                  {photos.length} photo{photos.length !== 1 ? "s" : ""} ready
+                </span>
+                <button
+                  onClick={handleAutoGroup}
+                  className="btn btn-primary h-11 px-6 rounded-xl text-[14px] gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  </svg>
+                  Group with AI
+                </button>
+              </div>
+            </motion.footer>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
-  // Render grouping stage (loading)
-  if (stage === "grouping" || stage === "submitting") {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-6 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
-            <div
-              className="absolute inset-0 rounded-full border-4 border-white border-t-transparent animate-spin"
-            />
-          </div>
-          <p className="text-lg font-medium mb-2">{progress.message}</p>
-          <p className="text-zinc-500 text-sm">
-            {progress.current} / {progress.total}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Render review stage
+  // Review state
   const validItems = items.filter((item) => item.photos.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-zinc-800">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
         <button
           onClick={() => setStage("upload")}
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-[14px] text-[#888] hover:text-white transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Photos
+          Back
         </button>
-        <div className="text-sm">
-          <span className="text-zinc-500">Customer:</span>{" "}
-          <span className="font-mono text-white">{session.taskRabbitId}</span>
+        <div className="flex items-center gap-2 text-[14px]">
+          <span className="text-[#666]">Customer</span>
+          <span className="font-mono text-white bg-[#1a1a1a] px-2.5 py-1 rounded-md">{session.taskRabbitId}</span>
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-auto p-6">
+      {/* Main */}
+      <main className="flex-1 overflow-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-1">Review Items</h1>
-          <p className="text-zinc-400 mb-6">
-            AI found {validItems.length} item{validItems.length !== 1 ? "s" : ""}. Review and adjust if needed.
-          </p>
+          <div className="mb-8">
+            <h1 className="text-[24px] font-semibold tracking-tight mb-1">
+              Review Items
+            </h1>
+            <p className="text-[15px] text-[#888]">
+              AI found {validItems.length} item{validItems.length !== 1 ? "s" : ""}. Adjust if needed.
+            </p>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <AnimatePresence>
-              {items.map((item, index) => (
+            {items.map((item, index) => {
+              if (item.photos.length === 0) return null;
+              
+              return (
                 <motion.div
                   key={item.id}
                   layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="card overflow-hidden"
                 >
-                  <div className="flex items-center justify-between p-3 border-b border-zinc-800">
-                    <span className="font-semibold">Item {index + 1}</span>
+                  {/* Item header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.06)]">
+                    <span className="text-[14px] font-medium">Item {index + 1}</span>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-zinc-500 hover:text-red-400 transition-colors text-sm"
+                      className="text-[13px] text-[#666] hover:text-red-400 transition-colors"
                     >
                       Remove
                     </button>
                   </div>
 
+                  {/* Photos grid */}
                   <div className="p-3">
-                    {item.photos.length === 0 ? (
-                      <p className="text-zinc-500 text-sm py-8 text-center">No photos</p>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        {item.photos.map((p, pIdx) => {
-                          const localPhoto = photos.find((lp) => lp.id === p.localPhotoId);
-                          if (!localPhoto) return null;
+                    <div className="grid grid-cols-2 gap-2">
+                      {item.photos.map((p, pIdx) => {
+                        const localPhoto = photos.find((lp) => lp.id === p.localPhotoId);
+                        if (!localPhoto) return null;
 
-                          const isFront = p.imageType === "FRONT";
-                          const isFirstFront = pIdx === item.photos.findIndex((pp) => pp.imageType === "FRONT");
-                          const isMain = isFront && isFirstFront;
+                        const isFront = p.imageType === "FRONT";
+                        const isFirstFront = pIdx === item.photos.findIndex((pp) => pp.imageType === "FRONT");
+                        const isMain = item.photos.length === 1 || (isFront && isFirstFront);
 
-                          return (
-                            <div
-                              key={p.localPhotoId}
-                              className={`relative rounded-xl overflow-hidden ${
-                                isMain ? "ring-2 ring-white" : ""
-                              }`}
-                            >
-                              <div className="aspect-square">
-                                <img
-                                  src={localPhoto.previewUrl}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
+                        return (
+                          <div
+                            key={p.localPhotoId}
+                            className={`relative rounded-xl overflow-hidden ring-1 ${
+                              isMain 
+                                ? "ring-violet-500 ring-2" 
+                                : "ring-[rgba(255,255,255,0.06)]"
+                            }`}
+                          >
+                            <div className="aspect-square">
+                              <img
+                                src={localPhoto.previewUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            
+                            {isMain && (
+                              <div className="absolute top-2 left-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide bg-violet-500 text-white px-2 py-0.5 rounded-full">
+                                  Main
+                                </span>
                               </div>
-                              {isMain && (
-                                <div className="absolute top-2 left-2">
-                                  <span className="bg-white text-zinc-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    MAIN
-                                  </span>
-                                </div>
-                              )}
-                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                <div className="flex items-center justify-between">
-                                  <select
-                                    value={p.imageType}
-                                    onChange={(e) =>
-                                      updatePhotoType(item.id, p.localPhotoId, e.target.value as PieceImageType)
-                                    }
-                                    className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer"
-                                  >
-                                    <option value="FRONT" className="bg-zinc-900">FRONT</option>
-                                    <option value="BACK" className="bg-zinc-900">BACK</option>
-                                    <option value="TAG" className="bg-zinc-900">TAG</option>
-                                  </select>
-                                  <button
-                                    onClick={() => removePhotoFromItem(item.id, p.localPhotoId)}
-                                    className="text-zinc-400 hover:text-red-400"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </div>
+                            )}
+
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                              <div className="flex items-center justify-between">
+                                <select
+                                  value={p.imageType}
+                                  onChange={(e) => updatePhotoType(item.id, p.localPhotoId, e.target.value as PieceImageType)}
+                                  className="bg-transparent text-[12px] font-medium text-white focus:outline-none cursor-pointer"
+                                >
+                                  <option value="FRONT" className="bg-[#1a1a1a]">Front</option>
+                                  <option value="BACK" className="bg-[#1a1a1a]">Back</option>
+                                  <option value="TAG" className="bg-[#1a1a1a]">Tag</option>
+                                </select>
+                                <button
+                                  onClick={() => removePhotoFromItem(item.id, p.localPhotoId)}
+                                  className="p-1 text-[#888] hover:text-red-400 transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </motion.div>
-              ))}
-            </AnimatePresence>
+              );
+            })}
           </div>
 
           {error && (
-            <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm text-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-[14px] text-red-400 text-center"
+            >
               {error}
-            </div>
+            </motion.div>
           )}
         </div>
-      </div>
+      </main>
 
-      {/* Bottom bar */}
-      <div className="border-t border-zinc-800 p-4">
+      {/* Footer */}
+      <footer className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <p className="text-zinc-400 text-sm">
-            {validItems.length} item{validItems.length !== 1 ? "s" : ""} ready to submit
-          </p>
+          <span className="text-[14px] text-[#888]">
+            {validItems.length} item{validItems.length !== 1 ? "s" : ""} · {validItems.reduce((sum, i) => sum + i.photos.length, 0)} photos
+          </span>
           <button
             onClick={handleSubmit}
             disabled={validItems.length === 0}
-            className="px-8 py-3 bg-white text-zinc-900 font-semibold rounded-xl hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary h-11 px-8 rounded-xl text-[14px]"
           >
             Submit to Fitted
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
