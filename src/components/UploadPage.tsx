@@ -18,7 +18,8 @@ interface Props {
 
 type Stage = "upload" | "processing" | "review";
 
-const AUTO_GROUP_BATCH_SIZE = 50;
+const AUTO_GROUP_BATCH_SIZE = 20;
+const AUTO_GROUP_IMAGE_SIZE = 384;
 
 function resizeImage(file: File, maxDim = 512): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -84,7 +85,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       const inputs = await Promise.all(
         photos.map(async (p) => ({
           id: p.id,
-          base64: await resizeImage(p.file),
+          base64: await resizeImage(p.file, AUTO_GROUP_IMAGE_SIZE),
           mimeType: "image/jpeg",
           fileName: p.file.name,
         }))
