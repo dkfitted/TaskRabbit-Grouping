@@ -18,7 +18,7 @@ interface Props {
 
 type Stage = "upload" | "processing" | "review";
 
-const AUTO_GROUP_BATCH_SIZE = 20;
+const AUTO_GROUP_BATCH_SIZE = 50;
 const AUTO_GROUP_IMAGE_SIZE = 384;
 
 function resizeImage(file: File, maxDim = 512): Promise<string> {
