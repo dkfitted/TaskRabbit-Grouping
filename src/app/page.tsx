@@ -73,67 +73,40 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="min-h-screen flex flex-col"
+            className="min-h-screen bg-[#faf5f3] flex flex-col items-center justify-center p-6"
           >
-            {/* Ambient glow */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.12),transparent_60%)]" />
-            </div>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+              className="w-16 h-16 mb-6 rounded-full bg-emerald-500 flex items-center justify-center"
+            >
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-center max-w-xs"
+            >
+              <h1 className="text-2xl font-semibold text-neutral-900 mb-2">
+                All done!
+              </h1>
+              <p className="text-sm text-neutral-500 mb-8">
+                {uploadResult.itemCount} item{uploadResult.itemCount !== 1 ? "s" : ""} with{" "}
+                {uploadResult.photoCount} photo{uploadResult.photoCount !== 1 ? "s" : ""} sent to Fitted
+              </p>
 
-            <div className="relative z-10 flex-1 flex items-center justify-center p-6">
-              <div className="max-w-sm w-full text-center">
-                {/* Success icon */}
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 200, 
-                    damping: 15,
-                    delay: 0.1 
-                  }}
-                  className="w-20 h-20 mx-auto mb-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25"
-                >
-                  <motion.svg 
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ delay: 0.4, duration: 0.4 }}
-                    className="w-10 h-10 text-white" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth={3}
-                    viewBox="0 0 24 24"
-                  >
-                    <motion.path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      d="M5 13l4 4L19 7" 
-                    />
-                  </motion.svg>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <h1 className="text-[28px] font-semibold tracking-tight mb-3">
-                    Upload Complete
-                  </h1>
-                  <p className="text-[16px] text-[#888] mb-10">
-                    {uploadResult.itemCount} item{uploadResult.itemCount !== 1 ? "s" : ""} with{" "}
-                    {uploadResult.photoCount} photo{uploadResult.photoCount !== 1 ? "s" : ""} sent to Fitted
-                  </p>
-
-                  <button
-                    onClick={handleReset}
-                    className="btn btn-primary w-full h-12 rounded-xl text-[15px] font-medium"
-                  >
-                    Process Next Customer
-                  </button>
-                </motion.div>
-              </div>
-            </div>
+              <button
+                onClick={handleReset}
+                className="w-full h-12 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors"
+              >
+                Next customer
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

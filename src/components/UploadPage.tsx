@@ -79,7 +79,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
     if (photos.length === 0) return;
 
     setStage("grouping");
-    setProgress({ current: 0, total: photos.length, message: "Preparing photos..." });
+    setProgress({ current: 0, total: photos.length, message: "Preparing..." });
     setError("");
 
     try {
@@ -110,7 +110,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         batches.push(photoInputs.slice(i, i + AUTO_GROUP_BATCH_SIZE));
       }
 
-      setProgress({ current: 0, total: batches.length, message: "AI is analyzing..." });
+      setProgress({ current: 0, total: batches.length, message: "Analyzing..." });
 
       const allItems: GroupedItem[] = [];
 
@@ -118,7 +118,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         setProgress({ 
           current: i + 1, 
           total: batches.length, 
-          message: batches.length > 1 ? `Processing batch ${i + 1}/${batches.length}` : "AI is analyzing..." 
+          message: batches.length > 1 ? `Batch ${i + 1} of ${batches.length}` : "Analyzing..." 
         });
 
         const res = await fetch("/api/auto-group", {
@@ -129,7 +129,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.error || "AI grouping failed");
+          throw new Error(err.error || "Grouping failed");
         }
 
         const data = await res.json();
@@ -266,14 +266,14 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
   // Loading state
   if (stage === "grouping" || stage === "submitting") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf5f3] flex items-center justify-center">
         <div className="text-center">
-          <div className="relative w-16 h-16 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-2 border-[#222]" />
-            <div className="absolute inset-0 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          <div className="relative w-12 h-12 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-neutral-200" />
+            <div className="absolute inset-0 rounded-full border-2 border-neutral-900 border-t-transparent animate-spin" />
           </div>
-          <p className="text-[15px] font-medium text-white mb-1">{progress.message}</p>
-          <p className="text-[13px] text-[#666]">
+          <p className="text-sm font-medium text-neutral-900">{progress.message}</p>
+          <p className="text-xs text-neutral-400 mt-1">
             {progress.current} of {progress.total}
           </p>
         </div>
@@ -284,45 +284,45 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
   // Upload state
   if (stage === "upload") {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
+        <header className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-[14px] text-[#888] hover:text-white transition-colors"
+            className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </button>
-          <div className="flex items-center gap-2 text-[14px]">
-            <span className="text-[#666]">Customer</span>
-            <span className="font-mono text-white bg-[#1a1a1a] px-2.5 py-1 rounded-md">{session.taskRabbitId}</span>
+          <div className="text-sm">
+            <span className="text-neutral-400">Customer </span>
+            <span className="font-mono font-medium">{session.taskRabbitId}</span>
           </div>
         </header>
 
         {/* Main */}
-        <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-          <div className="w-full max-w-xl">
+        <main className="flex-1 flex flex-col px-5 py-8">
+          <div className="max-w-lg mx-auto w-full">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-10"
+              className="text-center mb-8"
             >
-              <h1 className="text-[28px] font-semibold tracking-tight mb-2">
-                Upload Photos
+              <h1 className="text-2xl font-semibold text-neutral-900 mb-2">
+                Upload photos
               </h1>
-              <p className="text-[15px] text-[#888]">
-                Add all clothing photos. AI will group them automatically.
+              <p className="text-sm text-neutral-500">
+                Add all clothing photos, then AI groups them into items
               </p>
             </motion.div>
 
             {/* Drop zone */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.05 }}
               onDrop={(e) => {
                 e.preventDefault();
                 setIsDragging(false);
@@ -335,27 +335,27 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
               onDragLeave={() => setIsDragging(false)}
               onClick={() => fileInputRef.current?.click()}
               className={`
-                relative cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-200
+                cursor-pointer rounded-2xl border-2 border-dashed transition-all py-12 px-6
                 ${isDragging 
-                  ? "border-violet-500 bg-violet-500/5" 
-                  : "border-[#333] hover:border-[#444] hover:bg-[rgba(255,255,255,0.02)]"
+                  ? "border-neutral-900 bg-neutral-50" 
+                  : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                 }
               `}
             >
-              <div className="py-16 px-8 text-center">
+              <div className="text-center">
                 <div className={`
-                  w-14 h-14 mx-auto mb-5 rounded-2xl flex items-center justify-center transition-colors
-                  ${isDragging ? "bg-violet-500/20" : "bg-[#1a1a1a]"}
+                  w-12 h-12 mx-auto mb-4 rounded-xl flex items-center justify-center transition-colors
+                  ${isDragging ? "bg-neutral-200" : "bg-neutral-100"}
                 `}>
-                  <svg className={`w-6 h-6 ${isDragging ? "text-violet-400" : "text-[#666]"}`} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                   </svg>
                 </div>
-                <p className="text-[15px] font-medium text-white mb-1">
-                  {isDragging ? "Drop photos here" : "Click to upload or drag and drop"}
+                <p className="text-sm font-medium text-neutral-900 mb-1">
+                  {isDragging ? "Drop photos here" : "Click or drag photos"}
                 </p>
-                <p className="text-[13px] text-[#666]">
-                  JPG, PNG, or HEIC
+                <p className="text-xs text-neutral-400">
+                  JPG, PNG, HEIC
                 </p>
               </div>
               <input
@@ -375,31 +375,31 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-8"
+                  className="mt-6"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[14px] text-[#888]">
-                      {photos.length} photo{photos.length !== 1 ? "s" : ""} added
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-neutral-500">
+                      {photos.length} photo{photos.length !== 1 ? "s" : ""}
                     </span>
                     <button
                       onClick={() => {
                         photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
                         setPhotos([]);
                       }}
-                      className="text-[13px] text-[#666] hover:text-red-400 transition-colors"
+                      className="text-xs text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       Clear all
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                     {photos.map((photo, i) => (
                       <motion.div
                         key={photo.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.02 }}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-[#111] group ring-1 ring-[rgba(255,255,255,0.06)]"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 group"
                       >
                         <img
                           src={photo.previewUrl}
@@ -411,9 +411,9 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                             e.stopPropagation();
                             removePhoto(photo.id);
                           }}
-                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                         >
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
@@ -428,7 +428,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-[14px] text-red-400 text-center"
+                className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 text-center"
               >
                 {error}
               </motion.div>
@@ -443,20 +443,20 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4"
+              className="border-t border-neutral-100 px-5 py-4 bg-white"
             >
-              <div className="max-w-xl mx-auto flex items-center justify-between">
-                <span className="text-[14px] text-[#888]">
+              <div className="max-w-lg mx-auto flex items-center justify-between">
+                <span className="text-sm text-neutral-500">
                   {photos.length} photo{photos.length !== 1 ? "s" : ""} ready
                 </span>
                 <button
                   onClick={handleAutoGroup}
-                  className="btn btn-primary h-11 px-6 rounded-xl text-[14px] gap-2"
+                  className="h-10 px-5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                   </svg>
-                  Group with AI
+                  Auto-group
                 </button>
               </div>
             </motion.footer>
@@ -470,33 +470,33 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
   const validItems = items.filter((item) => item.photos.length > 0);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-neutral-50 flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.06)]">
+      <header className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 bg-white">
         <button
           onClick={() => setStage("upload")}
-          className="flex items-center gap-1.5 text-[14px] text-[#888] hover:text-white transition-colors"
+          className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Back
         </button>
-        <div className="flex items-center gap-2 text-[14px]">
-          <span className="text-[#666]">Customer</span>
-          <span className="font-mono text-white bg-[#1a1a1a] px-2.5 py-1 rounded-md">{session.taskRabbitId}</span>
+        <div className="text-sm">
+          <span className="text-neutral-400">Customer </span>
+          <span className="font-mono font-medium">{session.taskRabbitId}</span>
         </div>
       </header>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-[24px] font-semibold tracking-tight mb-1">
-              Review Items
+      <main className="flex-1 overflow-auto px-5 py-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold text-neutral-900 mb-1">
+              Review items
             </h1>
-            <p className="text-[15px] text-[#888]">
-              AI found {validItems.length} item{validItems.length !== 1 ? "s" : ""}. Adjust if needed.
+            <p className="text-sm text-neutral-500">
+              {validItems.length} item{validItems.length !== 1 ? "s" : ""} found — adjust if needed
             </p>
           </div>
 
@@ -510,20 +510,18 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="card overflow-hidden"
+                  className="bg-white rounded-2xl border border-neutral-200 overflow-hidden"
                 >
-                  {/* Item header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.06)]">
-                    <span className="text-[14px] font-medium">Item {index + 1}</span>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
+                    <span className="text-sm font-medium text-neutral-900">Item {index + 1}</span>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-[13px] text-[#666] hover:text-red-400 transition-colors"
+                      className="text-xs text-neutral-400 hover:text-red-500 transition-colors"
                     >
                       Remove
                     </button>
                   </div>
 
-                  {/* Photos grid */}
                   <div className="p-3">
                     <div className="grid grid-cols-2 gap-2">
                       {item.photos.map((p, pIdx) => {
@@ -537,10 +535,8 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                         return (
                           <div
                             key={p.localPhotoId}
-                            className={`relative rounded-xl overflow-hidden ring-1 ${
-                              isMain 
-                                ? "ring-violet-500 ring-2" 
-                                : "ring-[rgba(255,255,255,0.06)]"
+                            className={`relative rounded-xl overflow-hidden ${
+                              isMain ? "ring-2 ring-neutral-900" : "ring-1 ring-neutral-200"
                             }`}
                           >
                             <div className="aspect-square">
@@ -553,28 +549,28 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
                             
                             {isMain && (
                               <div className="absolute top-2 left-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wide bg-violet-500 text-white px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide bg-neutral-900 text-white px-2 py-0.5 rounded-full">
                                   Main
                                 </span>
                               </div>
                             )}
 
-                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
                               <div className="flex items-center justify-between">
                                 <select
                                   value={p.imageType}
                                   onChange={(e) => updatePhotoType(item.id, p.localPhotoId, e.target.value as PieceImageType)}
-                                  className="bg-transparent text-[12px] font-medium text-white focus:outline-none cursor-pointer"
+                                  className="bg-transparent text-xs font-medium text-white focus:outline-none cursor-pointer"
                                 >
-                                  <option value="FRONT" className="bg-[#1a1a1a]">Front</option>
-                                  <option value="BACK" className="bg-[#1a1a1a]">Back</option>
-                                  <option value="TAG" className="bg-[#1a1a1a]">Tag</option>
+                                  <option value="FRONT" className="text-neutral-900">Front</option>
+                                  <option value="BACK" className="text-neutral-900">Back</option>
+                                  <option value="TAG" className="text-neutral-900">Tag</option>
                                 </select>
                                 <button
                                   onClick={() => removePhotoFromItem(item.id, p.localPhotoId)}
-                                  className="p-1 text-[#888] hover:text-red-400 transition-colors"
+                                  className="p-1 text-white/70 hover:text-white transition-colors"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                   </svg>
                                 </button>
@@ -594,7 +590,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-[14px] text-red-400 text-center"
+              className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 text-center"
             >
               {error}
             </motion.div>
@@ -603,15 +599,15 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[rgba(255,255,255,0.06)] px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span className="text-[14px] text-[#888]">
-            {validItems.length} item{validItems.length !== 1 ? "s" : ""} · {validItems.reduce((sum, i) => sum + i.photos.length, 0)} photos
+      <footer className="border-t border-neutral-200 px-5 py-4 bg-white">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <span className="text-sm text-neutral-500">
+            {validItems.length} item{validItems.length !== 1 ? "s" : ""}, {validItems.reduce((sum, i) => sum + i.photos.length, 0)} photos
           </span>
           <button
             onClick={handleSubmit}
             disabled={validItems.length === 0}
-            className="btn btn-primary h-11 px-8 rounded-xl text-[14px]"
+            className="h-10 px-6 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Submit to Fitted
           </button>

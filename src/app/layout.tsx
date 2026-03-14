@@ -5,18 +5,19 @@ import "./globals.css";
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "Fitted × TaskRabbit",
-  description: "Photo upload and grouping for closet digitization",
+  description: "Photo upload for closet digitization",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#09090b",
+  themeColor: "#faf5f3",
 };
 
 export default function RootLayout({
@@ -25,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.className}>
-      <body className="bg-zinc-950 text-white antialiased">{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }
