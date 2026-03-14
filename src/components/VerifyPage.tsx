@@ -30,10 +30,8 @@ export default function VerifyPage({ onVerified }: Props) {
       <div className="w-full max-w-xs text-center">
         {/* Logo */}
         <div className="mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-black rounded-xl mb-3">
-            <span className="text-white font-bold text-lg">F</span>
-          </div>
-          <h1 className="text-lg font-semibold text-gray-900">Fitted Upload</h1>
+          <img src="/logo.png" alt="Fitted" className="h-10 mx-auto mb-2" />
+          <p className="text-sm text-gray-500">TaskRabbit Upload</p>
         </div>
 
         {/* Form */}
