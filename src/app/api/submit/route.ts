@@ -7,9 +7,9 @@ export const maxDuration = 60;
 
 const FIRESTORE_PROJECT = "fitted-upload";
 const COLLECTION =
-  process.env.FIRESTORE_COLLECTION ?? "temp-uploads";
+  process.env.FIRESTORE_COLLECTION ?? "clothing-item-uploads";
 const SERVER_URL =
-  process.env.SERVER_URL ?? "https://fitted-closet-sandbox.appspot.com";
+  process.env.SERVER_URL ?? "https://app.fittedcloset.com";
 const DELAY_MS_BETWEEN_DOCS = 200;
 
 function getFirestore(): admin.firestore.Firestore {
