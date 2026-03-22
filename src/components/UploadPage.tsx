@@ -42,11 +42,14 @@ function resizeImage(file: File, maxDim = 512): Promise<string> {
 }
 
 export default function UploadPage({ session, onComplete, onBack }: Props) {
+  const MAX_PHOTOS_PER_BATCH = 99;
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
+  const [standbyPhotos, setStandbyPhotos] = useState<LocalPhoto[]>([]);
   const [items, setItems] = useState<GroupedItem[]>([]);
   const [stage, setStage] = useState<Stage>("upload");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addPhotos = useCallback((files: FileList | File[]) => {
@@ -58,6 +61,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         previewUrl: URL.createObjectURL(file),
       }));
     setPhotos((prev) => [...prev, ...newPhotos]);
+    setNotice("");
   }, []);
 
   const removePhoto = useCallback((id: string) => {
@@ -70,10 +74,9 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
   const handleAutoGroup = async () => {
     if (photos.length === 0) return;
-    if (photos.length > 99) {
-      setError("Maximum 99 photos. Remove some and try again.");
-      return;
-    }
+    const activePhotos = photos.slice(0, MAX_PHOTOS_PER_BATCH);
+    const overflowPhotos = photos.slice(MAX_PHOTOS_PER_BATCH);
+
     setStage("processing");
     setStatus("Analyzing photos...");
     setError("");
@@ -82,7 +85,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
     try {
       const inputs = await Promise.all(
-        photos.map(async (p) => ({
+        activePhotos.map(async (p) => ({
           id: p.id,
           base64: await resizeImage(p.file),
           mimeType: "image/jpeg",
@@ -112,6 +115,15 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         );
         allItems.push(...batchItems);
       }
+
+      if (overflowPhotos.length > 0) {
+        setPhotos(activePhotos);
+        setStandbyPhotos((prev) => [...prev, ...overflowPhotos]);
+        setNotice(
+          `${overflowPhotos.length} photos moved to standby. Submit this batch to continue with the next one.`
+        );
+      }
+
       setItems(allItems);
       setStage("review");
     } catch (err) {
@@ -159,6 +171,20 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
 
       if (!res.ok) throw new Error((await res.json()).error || "Submit failed");
       const data: SubmitResponse = await res.json();
+
+      if (standbyPhotos.length > 0) {
+        const nextBatch = standbyPhotos.slice(0, MAX_PHOTOS_PER_BATCH);
+        const remainingStandby = standbyPhotos.slice(MAX_PHOTOS_PER_BATCH);
+        setPhotos(nextBatch);
+        setStandbyPhotos(remainingStandby);
+        setItems([]);
+        setStage("upload");
+        setNotice(
+          `${standbyPhotos.length} standby photos remaining. Next batch is ready to auto-group.`
+        );
+        return;
+      }
+
       onComplete({ itemCount: data.itemCount, photoCount: data.photoCount });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -272,7 +298,8 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       <main className={`w-full max-w-lg p-4 flex-1 ${photos.length > 0 ? "pb-24" : ""}`}>
         <h2 className="text-lg font-semibold text-center mb-1">Add photos</h2>
         <p className="text-sm text-gray-500 text-center mb-1">Upload all clothing photos</p>
-        <p className="text-xs text-gray-400 text-center mb-6">Up to 99 images at a time · Upload in sequence for better auto-grouping accuracy</p>
+        <p className="text-xs text-gray-400 text-center mb-2">Up to 99 images per batch · Upload in sequence for better auto-grouping accuracy</p>
+        {notice && <p className="text-xs text-amber-700 text-center mb-4">{notice}</p>}
 
         {/* Upload button */}
         <button
@@ -301,11 +328,17 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         {photos.length > 0 && (
           <div className="mt-6">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-gray-500">{photos.length} photos</span>
+              <span className="text-sm text-gray-500">
+                {photos.length} ready
+                {standbyPhotos.length > 0 ? ` · ${standbyPhotos.length} on standby` : ""}
+              </span>
               <button
                 onClick={() => {
                   photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+                  standbyPhotos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
                   setPhotos([]);
+                  setStandbyPhotos([]);
+                  setNotice("");
                 }}
                 className="text-xs text-gray-400 hover:text-red-500"
               >
