@@ -34,7 +34,7 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
   }
 }
 
-function resizeImage(file: File, maxDim = 512): Promise<string> {
+function resizeImage(file: File, maxDim = 768): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
