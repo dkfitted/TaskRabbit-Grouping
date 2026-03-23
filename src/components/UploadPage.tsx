@@ -176,29 +176,45 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         }
       }
 
-      setStatus("Submitting...");
-
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskRabbitId: session.taskRabbitId,
-          items: validItems.map((item) => ({
-            photos: item.photos.map((p, i) => {
-              const u = uploads.get(p.localPhotoId)!;
-              const isMain = item.photos.length === 1 || (p.imageType === "FRONT" && i === item.photos.findIndex((x) => x.imageType === "FRONT"));
-              return { ...u, imageType: p.imageType, isMainImage: isMain };
-            }),
-          })),
+      const submitItems = validItems.map((item) => ({
+        photos: item.photos.map((p, i) => {
+          const u = uploads.get(p.localPhotoId)!;
+          const isMain = item.photos.length === 1 || (p.imageType === "FRONT" && i === item.photos.findIndex((x) => x.imageType === "FRONT"));
+          return { ...u, imageType: p.imageType, isMainImage: isMain };
         }),
-      });
+      }));
 
-      if (!res.ok) throw new Error(await readErrorMessage(res, "Submit failed"));
-      let data: SubmitResponse;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid submit response");
+      // Split submit into multiple API calls to avoid single-request timeouts on large item counts.
+      const SUBMIT_BATCH_SIZE = 12;
+      const totalBatches = Math.ceil(submitItems.length / SUBMIT_BATCH_SIZE);
+      let totalSubmittedItems = 0;
+      let totalSubmittedPhotos = 0;
+
+      for (let i = 0; i < submitItems.length; i += SUBMIT_BATCH_SIZE) {
+        const batchIndex = Math.floor(i / SUBMIT_BATCH_SIZE);
+        const batchItems = submitItems.slice(i, i + SUBMIT_BATCH_SIZE);
+        setStatus(`Submitting batch ${batchIndex + 1} of ${totalBatches}...`);
+
+        const res = await fetch("/api/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskRabbitId: session.taskRabbitId,
+            items: batchItems,
+            batchIndex,
+            batchTotal: totalBatches,
+          }),
+        });
+
+        if (!res.ok) throw new Error(await readErrorMessage(res, "Submit failed"));
+        let data: SubmitResponse;
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Invalid submit response");
+        }
+        totalSubmittedItems += data.itemCount;
+        totalSubmittedPhotos += data.photoCount;
       }
 
       if (standbyPhotos.length > 0) {
@@ -214,7 +230,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         return;
       }
 
-      onComplete({ itemCount: data.itemCount, photoCount: data.photoCount });
+      onComplete({ itemCount: totalSubmittedItems, photoCount: totalSubmittedPhotos });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
       setStage("review");
