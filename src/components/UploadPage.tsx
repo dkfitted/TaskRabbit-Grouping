@@ -18,6 +18,22 @@ interface Props {
 
 type Stage = "upload" | "processing" | "review";
 
+async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.error === "string" && body.error.trim()) return body.error;
+    if (typeof body?.details === "string" && body.details.trim()) return body.details;
+    return fallback;
+  } catch {
+    try {
+      const text = await res.text();
+      return text?.trim() ? text : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+}
+
 function resizeImage(file: File, maxDim = 512): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -103,10 +119,14 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
           body: JSON.stringify({ photos: batch }),
         });
         if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || err.details || "Grouping failed");
+          throw new Error(await readErrorMessage(res, "Grouping failed"));
         }
-        const data = await res.json();
+        let data: { groups: { photos: { photoId: string; imageType: PieceImageType }[] }[] };
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Invalid grouping response");
+        }
         const batchItems = data.groups.map(
           (g: { photos: { photoId: string; imageType: PieceImageType }[] }) => ({
             id: crypto.randomUUID(),
@@ -148,8 +168,12 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         const form = new FormData();
         form.append("file", photo.file);
         const res = await fetch("/api/upload-image", { method: "POST", body: form });
-        if (!res.ok) throw new Error("Upload failed");
-        uploads.set(entry.localPhotoId, await res.json());
+        if (!res.ok) throw new Error(await readErrorMessage(res, "Upload failed"));
+        try {
+          uploads.set(entry.localPhotoId, await res.json());
+        } catch {
+          throw new Error("Invalid upload response");
+        }
       }
 
       setStatus("Submitting...");
@@ -169,8 +193,13 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         }),
       });
 
-      if (!res.ok) throw new Error((await res.json()).error || "Submit failed");
-      const data: SubmitResponse = await res.json();
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Submit failed"));
+      let data: SubmitResponse;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid submit response");
+      }
 
       if (standbyPhotos.length > 0) {
         const nextBatch = standbyPhotos.slice(0, MAX_PHOTOS_PER_BATCH);
