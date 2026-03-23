@@ -10,7 +10,7 @@ const COLLECTION =
   process.env.FIRESTORE_COLLECTION ?? "clothing-item-uploads";
 const SERVER_URL =
   process.env.SERVER_URL ?? "https://app.fittedcloset.com";
-const DELAY_MS_BETWEEN_DOCS = 200;
+const DELAY_MS_BETWEEN_DOCS = 5000;
 
 function getFirestore(): admin.firestore.Firestore {
   if (admin.apps.length === 0) {
