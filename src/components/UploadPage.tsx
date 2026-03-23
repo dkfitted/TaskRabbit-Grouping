@@ -58,7 +58,7 @@ function resizeImage(file: File, maxDim = 512): Promise<string> {
 }
 
 export default function UploadPage({ session, onComplete, onBack }: Props) {
-  const MAX_PHOTOS_PER_BATCH = 99;
+  const MAX_PHOTOS_PER_BATCH = 50;
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [standbyPhotos, setStandbyPhotos] = useState<LocalPhoto[]>([]);
   const [items, setItems] = useState<GroupedItem[]>([]);
@@ -343,7 +343,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
       <main className={`w-full max-w-lg p-4 flex-1 ${photos.length > 0 ? "pb-24" : ""}`}>
         <h2 className="text-lg font-semibold text-center mb-1">Add photos</h2>
         <p className="text-sm text-gray-500 text-center mb-1">Upload all clothing photos</p>
-        <p className="text-xs text-gray-400 text-center mb-2">Up to 99 images per batch · Upload in sequence for better auto-grouping accuracy</p>
+        <p className="text-xs text-gray-400 text-center mb-2">Up to 50 images per batch · Upload in sequence for better auto-grouping accuracy</p>
         {notice && <p className="text-xs text-amber-700 text-center mb-4">{notice}</p>}
 
         {/* Upload button */}
