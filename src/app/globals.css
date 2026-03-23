@@ -7,6 +7,14 @@
 }
 
 html, body {
-  font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.pb-safe-footer {
+  padding-bottom: max(1.5rem, calc(1rem + env(safe-area-inset-bottom)));
 }
