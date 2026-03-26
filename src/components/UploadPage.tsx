@@ -191,36 +191,22 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         }),
       }));
 
-      const SUBMIT_BATCH_SIZE = 12;
-      const totalBatches = Math.ceil(submitItems.length / SUBMIT_BATCH_SIZE);
-      let totalSubmittedItems = 0;
-      let totalSubmittedPhotos = 0;
+      setStatus("Submitting...");
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskRabbitId: session.taskRabbitId,
+          items: submitItems,
+        }),
+      });
 
-      for (let i = 0; i < submitItems.length; i += SUBMIT_BATCH_SIZE) {
-        const batchIndex = Math.floor(i / SUBMIT_BATCH_SIZE);
-        const batchItems = submitItems.slice(i, i + SUBMIT_BATCH_SIZE);
-        setStatus(`Submitting batch ${batchIndex + 1} of ${totalBatches}...`);
-
-        const res = await fetch("/api/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            taskRabbitId: session.taskRabbitId,
-            items: batchItems,
-            batchIndex,
-            batchTotal: totalBatches,
-          }),
-        });
-
-        if (!res.ok) throw new Error(await readErrorMessage(res, "Submit failed"));
-        let data: SubmitResponse;
-        try {
-          data = await res.json();
-        } catch {
-          throw new Error("Invalid submit response");
-        }
-        totalSubmittedItems += data.itemCount;
-        totalSubmittedPhotos += data.photoCount;
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Submit failed"));
+      let data: SubmitResponse;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid submit response");
       }
 
       if (standbyPhotos.length > 0) {
@@ -236,7 +222,7 @@ export default function UploadPage({ session, onComplete, onBack }: Props) {
         return;
       }
 
-      onComplete({ itemCount: totalSubmittedItems, photoCount: totalSubmittedPhotos });
+      onComplete({ itemCount: data.itemCount, photoCount: data.photoCount });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
       setStage("review");
