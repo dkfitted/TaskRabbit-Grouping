@@ -78,8 +78,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const now = new Date();
-    const uploadedTimeMillis = now.getTime();
     const fmt = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/New_York",
       year: "numeric",
@@ -90,11 +88,6 @@ export async function POST(req: NextRequest) {
       second: "2-digit",
       hour12: false,
     });
-    const parts = fmt.formatToParts(now);
-    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-    const uploadedTime =
-      `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} -0500 (EST)`;
-
     const validItems = items
       .map((item) => {
         const photos = item.photos
@@ -131,6 +124,13 @@ export async function POST(req: NextRequest) {
       if (i > 0) {
         await new Promise((r) => setTimeout(r, DELAY_MS_BETWEEN_DOCS));
       }
+
+      const now = new Date();
+      const uploadedTimeMillis = now.getTime();
+      const parts = fmt.formatToParts(now);
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+      const uploadedTime =
+        `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} -0500 (EST)`;
 
       const itemId = 1000 + i;
       const doc = {
